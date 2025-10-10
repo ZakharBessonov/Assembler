@@ -36,6 +36,23 @@ size_t SizeOfFile(FILE* fp)
     return (size_t)statistics.st_size;
 }
 
+int IsThereCommandIAmongListed(int command, int numOfCommand, ...)
+{
+    va_list arg_ptr;
+    va_start(arg_ptr, numOfCommand);
+    for (int i = 0; i < numOfCommand; i++)
+    {
+        if (command == va_arg(arg_ptr, int))
+        {
+            va_end(arg_ptr);
+            return 1;
+        }
+    }
+
+    va_end(arg_ptr);
+    return 0;
+}
+
 size_t ReadFile(char** buffer, FILE* fp)
 {
     // Узнаём размер файла

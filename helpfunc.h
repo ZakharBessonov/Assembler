@@ -5,6 +5,8 @@ void PrintErrorInfo(const char* file, const char* func, int line, const char* me
 
 size_t SizeOfFile(FILE* fp);
 
+int IsThereCommandIAmongListed(int command, int numOfCommand, ...);
+
 size_t ReadFile(char** buffer, FILE* fp);
 
 size_t CountNumLine(char* buffer, size_t lengthOfBuffer);

@@ -8,7 +8,7 @@ flags=-I/Users/zaharbessonov/Desktop/Учёба\ в\ институте\ /Ин
 
 CC=g++
 
-sources=main.cpp assembler.cpp helpfunc.cpp
+sources=main.cpp asm_generalFuncs.cpp asm_helpFuncs.cpp asm_ListingFuncs.cpp
 
 all:
 	$(CC) $(sources) -o assembler $(flags)

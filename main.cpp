@@ -1,12 +1,11 @@
 #include <stdio.h>
-#include <stdlib.h>
 
 #include "asm_consts.h"
-#include "asm_generalFuncs.h"
-#include "asm_helpFuncs.h"
+#include "asm_general_funcs.h"
+#include "asm_help_funcs.h"
 #include "commands.h"
-#include "asm_listingFuncs.h"
-#include "asm_structs"
+#include "asm_listing_funcs.h"
+#include "asm_structs.h"
 
 FILE* logfileAsm = NULL;
 
@@ -16,7 +15,7 @@ int main(int argc, const char *argv[])
     if (argc <= REQUIRED_NUMBER_OF_ARGUMENTS)
     {
         fprintf(logfileAsm, "ERROR: Too little arguments were passed. \n"
-                            "Input data format: sourceFileName.asm outputFileName.bin\n");
+                            "       Input data format: sourceFileName.asm outputFileName.bin\n");
         return 1;
     }
 
@@ -29,7 +28,7 @@ int main(int argc, const char *argv[])
 
     AsmReadFileAndCreateArrayOfPointers(&dataForAssembly);
     AsmInitLabels(&dataForAssembly);
-    AsmInitHeaderForOutputCode(&dataForAssembly);
+    AsmInitHeaderForByteCode(&dataForAssembly);
 
     if (AsmCompileByteCode(&dataForAssembly))
     {
@@ -41,6 +40,7 @@ int main(int argc, const char *argv[])
     AsmWriteInformationToListingFile(&dataForAssembly, argv[1])
 
     AsmByteCodeDtor(&dataForAssembly);
+    fclose(logfileAsm);
 
     return 0;
 }

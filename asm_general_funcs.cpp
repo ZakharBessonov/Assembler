@@ -3,11 +3,10 @@
 #include <string.h>
 
 #include "asm_consts.h"
-#include "asm_generalFuncs.h"
-#include "asm_helpFuncs.h"
+#include "asm_general_funcs.h"
+#include "asm_help_funcs.h"
 #include "commands.h"
-#include "asm_listingFuncs.h"
-#include "asm_structs"
+#include "asm_structs.h"
 
 extern FILE* logfileAsm;
 
@@ -70,7 +69,7 @@ int AsmLineIsLabel(size_t numOfLine, DataForAssembly* dataForAssembly)
         return 0;
     }
 
-    dataForAssembly->arrayOfLabels[label] == dataForAssembly->lengthOfByteCode - HEADER_OFFSET;
+    dataForAssembly->arrayOfLabels[label] = dataForAssembly->lengthOfByteCode - HEADER_OFFSET;
     return 1;
 }
 
@@ -138,7 +137,7 @@ int AsmWriteParamLabelToByteCode(size_t numOfLine, DataForAssembly* dataForAssem
     return 0;
 }
 
-int AsmIsRegisterIsInvalid(const char* tempRegister)
+int AsmIsRegisterInvalid(const char* tempRegister)
 {
     return (strlen(tempRegister) != MAX_LENGTH_OF_REGISTER_NAME) || (tempRegister[0] < 'A')
             || (tempRegister[0] => 'A' + CNT_OF_REGISTERS);

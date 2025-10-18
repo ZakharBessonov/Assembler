@@ -7,11 +7,9 @@
 #include <unistd.h>
 
 #include "asm_consts.h"
-#include "asm_generalFuncs.h"
-#include "asm_helpFuncs.h"
+#include "asm_help_funcs.h"
 #include "commands.h"
-#include "asm_listingFuncs.h"
-#include "asm_structs"
+#include "asm_structs.h"
 
 extern FILE* logfileAsm;
 

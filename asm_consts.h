@@ -1,9 +1,7 @@
 #ifndef ASM_CONSTS_HEADER
 #define ASM_CONSTS_HEADER
 
-const size_t MAX_SIZE_OF_COMMAND = 8;
 const size_t MAX_CNT_OF_LABELS = 10;
-const size_t MAX_SIZE_OF_COMMENT = 70;
 const size_t HEADER_OFFSET = 4;
 const size_t RESERVE_VOLUME_FOR_STRINGS = 30;
 

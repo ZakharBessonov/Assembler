@@ -10,6 +10,6 @@ struct DataForAssembly
     int     arrayOfLabels[MAX_CNT_OF_LABELS];
     int*    byteCode;
     size_t  lengthOfByteCode;
-}
+};
 
 #endif

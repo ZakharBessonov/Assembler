@@ -3,11 +3,9 @@
 #include <string.h>
 
 #include "asm_consts.h"
-#include "asm_generalFuncs.h"
-#include "asm_helpFuncs.h"
 #include "commands.h"
-#include "asm_listingFuncs.h"
-#include "asm_structs"
+#include "asm_listing_funcs.h"
+#include "asm_structs.h"
 
 extern FILE* logfile;
 

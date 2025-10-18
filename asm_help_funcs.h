@@ -1,7 +1,7 @@
 #ifndef ASM_HELP_FUNCS_HEADER
 #define ASM_HELP_FUNCS_HEADER
 
-#include "asm_structs"
+#include "asm_structs.h"
 
 size_t AsmSizeOfFile(FILE* fp);
 
@@ -17,6 +17,6 @@ void AsmReadFileAndCreateArrayOfPointers(DataForAssembly* dataForAssembly);
 
 void AsmInitLabels(DataForAssembly* dataForAssembly);
 
-void AsmInitHeaderForOutput(DataForAssembly* dataForAssembly);
+void AsmInitHeaderForByteCode(DataForAssembly* dataForAssembly);
 
 #endif

@@ -8,7 +8,7 @@
 
 #include "asm_consts.h"
 #include "asm_help_funcs.h"
-#include "commands.h"
+#include "asm_commands.h"
 #include "asm_structs.h"
 
 extern FILE* logfileAsm;
@@ -24,7 +24,7 @@ size_t AsmSizeOfFile(FILE* fp)
 int AsmOpenSourceFile(const char* sourceName, DataForAssembly* dataForAssembly)
 {
     dataForAssembly->source = fopen(sourceName, "r");
-    if (fp == NULL)
+    if (dataForAssembly->source == NULL)
     {
         fprintf(logfileAsm, "ERROR: Failed to open file \"%s\".\n", sourceName);
         return 1;
@@ -50,6 +50,7 @@ size_t AsmReadFile(DataForAssembly* dataForAssembly)
 size_t AsmCountNumLine(DataForAssembly* dataForAssembly, size_t lengthOfBuffer)
 {
     size_t ans = 0;
+
     for (size_t i = 0; i < lengthOfBuffer; i++)
     {
         if (dataForAssembly->buffer[i] == '\n')
@@ -73,15 +74,26 @@ size_t AsmFillArrayOfPointers(DataForAssembly* dataForAssembly, size_t lengthOfB
         return 1;
     }
 
+    bool isStringNotEmpty = false;
     char* leftPosition = dataForAssembly->buffer;
     int j = 0;
     for (size_t i = 0; i < lengthOfBuffer; i++)
     {
-        if (dataForAssembly->buffer[i] == '\0')
+        if (!isspace(dataForAssembly->buffer[i]) && dataForAssembly->buffer[i] != '\0')
         {
-            dataForAssembly->arrayOfPointers[j] = leftPosition;
+            isStringNotEmpty = true;
+        }
+
+        if (dataForAssembly->buffer[i] == '\0' && isStringNotEmpty)
+        {
+            dataForAssembly->arrayOfPointers[j++] = leftPosition;
             leftPosition = &dataForAssembly->buffer[i+1];
-            j++;
+            isStringNotEmpty = false;
+        }
+        else if (!isStringNotEmpty)
+        {
+            leftPosition = &dataForAssembly->buffer[i+1];
+            numOfLine--;
         }
     }
 
@@ -108,7 +120,7 @@ void AsmReadFileAndCreateArrayOfPointers(DataForAssembly* dataForAssembly)
             return;
         }
     }
-    (*buffer)[lengthOfBuffer++] = '\0';
+    dataForAssembly->buffer[lengthOfBuffer++] = '\0';
 
     dataForAssembly->cntOfLines = AsmFillArrayOfPointers(dataForAssembly, lengthOfBuffer);
 }
@@ -121,7 +133,7 @@ void AsmInitLabels(DataForAssembly* dataForAssembly)
     }
 }
 
-void AsmInitHeaderForOutput(DataForAssembly* dataForAssembly)
+void AsmInitHeaderForByteCode(DataForAssembly* dataForAssembly)
 {
     dataForAssembly->byteCode = (int*) calloc(2 * dataForAssembly->cntOfLines + 4, sizeof(int));
 
@@ -130,7 +142,7 @@ void AsmInitHeaderForOutput(DataForAssembly* dataForAssembly)
     dataForAssembly->byteCode[2] = SIGNATURE_2;
     dataForAssembly->byteCode[3] = SIGNATURE_3;
 
-    dataForAssembly->lengthOfOutput = 4;
+    dataForAssembly->lengthOfByteCode = HEADER_OFFSET;
 }
 
 void AsmByteCodeDtor(DataForAssembly* dataForAssembly)
@@ -142,3 +154,22 @@ void AsmByteCodeDtor(DataForAssembly* dataForAssembly)
     dataForAssembly->cntOfLines = 0;
     dataForAssembly->lengthOfByteCode = 0;
 }
+
+int AsmOpenLogFile()
+{
+    logfileAsm = fopen(LOG_FILE_NAME_ASM, "w");
+    if (logfileAsm == NULL)
+    {
+        printf("ERROR: An error occurred while opening logfileAsm.\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+void AsmCloseLogFile()
+{
+    fclose(logfileAsm);
+}
+
+

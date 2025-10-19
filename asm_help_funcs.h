@@ -19,4 +19,10 @@ void AsmInitLabels(DataForAssembly* dataForAssembly);
 
 void AsmInitHeaderForByteCode(DataForAssembly* dataForAssembly);
 
+void AsmByteCodeDtor(DataForAssembly* dataForAssembly);
+
+int AsmOpenLogFile();
+
+void AsmCloseLogFile();
+
 #endif

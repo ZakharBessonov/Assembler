@@ -3,45 +3,46 @@
 #include <string.h>
 
 #include "asm_consts.h"
-#include "commands.h"
+#include "asm_commands.h"
 #include "asm_listing_funcs.h"
 #include "asm_structs.h"
 
-extern FILE* logfile;
+extern FILE* logfileAsm;
 
 int AsmWriteInformationToListingFile(DataForAssembly* dataForAssembly, const char* sourceFileName)
 {
-    FILE* listingFile = fopen(LISTING_FILE_NAME, fileOpenMode);
+    FILE* listingFile = fopen(LISTING_FILE_NAME, "w");
     if (listingFile == NULL)
     {
-        fprintf(logfile, "ERROR: An error occurred while opening the listing file.\n");
+        fprintf(logfileAsm, "ERROR: An error occurred while opening the listing file.\n");
         return 1;
     }
 
     fprintf(listingFile, "--------------------- Listing file for %s ---------------------\n\n", sourceFileName);
 
-    for (size_t i = HEADER_OFFSET; i < dataForAssembly->lengthOfByteCode; i++)
+    for (int i = HEADER_OFFSET; i < (int)dataForAssembly->lengthOfByteCode; i++)
     {
         if (dataForAssembly->byteCode[i] < 0 || dataForAssembly->byteCode[i] >= CNT_OF_COMMANDS)
         {
-            fprintf(listingFile, "[%zu] Unknown command\n", i);
+            fprintf(listingFile, "[%08d] Unknown command\n", i - HEADER_OFFSET);
             continue;
         }
 
-        int codeOfCmd = commands[dataForAssembly->byteCode[i]].code;
-        switch(commands[dataForAssembly->byteCode[i]].type)
+        int codeOfCmd = cmds[dataForAssembly->byteCode[i]].code;
+        int arg = 0;
+        switch(cmds[dataForAssembly->byteCode[i]].type)
         {
             case PARAM_ZERO:
-                fprintf(listingFile, "[%8zu] %-10d %-20s\n", i, codeOfCmd, comands[codeOfCmd].name);
+                fprintf(listingFile, "[%08d] %-10d %-20s\n", i - HEADER_OFFSET, codeOfCmd, cmds[codeOfCmd].name);
                 break;
             case PARAM_REGISTER:
-                int arg = dataForAssembly->byteCode[i + 1];
-                fprintf(listingFile, "[%8zu] %-5d%-5d %-10s%cX\n", i, codeOfCmd, arg, comands[codeOfCmd].name, arg + 'A');
+                arg = dataForAssembly->byteCode[i + 1];
+                fprintf(listingFile, "[%08d] %-5d%-5d %-10s%cX\n", i - HEADER_OFFSET, codeOfCmd, arg, cmds[codeOfCmd].name, arg + 'A');
                 i++;
                 break;
             default:
-                int arg = dataForAssembly->byteCode[i + 1];
-                fprintf(listingFile, "[%8zu] %-5d%-5d %-10s%-10d\n", i, codeOfCmd, arg, comands[codeOfCmd].name, arg);
+                arg = dataForAssembly->byteCode[i + 1];
+                fprintf(listingFile, "[%08d] %-5d%-5d %-10s%-10d\n", i - HEADER_OFFSET, codeOfCmd, arg, cmds[codeOfCmd].name, arg);
                 i++;
                 break;
         }

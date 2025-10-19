@@ -2,7 +2,7 @@
 #define ASM_GENERAL_FUNCS_HEADER
 
 #include "asm_structs.h"
-#include "commands.h"
+#include "asm_commands.h"
 
 int AsmCompileByteCode(DataForAssembly* dataForAssembly);
 
@@ -19,5 +19,7 @@ int AsmWriteParamRegisterToByteCode(size_t numOfLine, DataForAssembly* dataForAs
 int AsmWriteParamLabelToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly);
 
 int AsmIsRegisterInvalid(const char* tempRegister);
+
+int AsmWriteByteCodeToBinFile(DataForAssembly* dataForAssembly, const char* outputFileName);
 
 #endif

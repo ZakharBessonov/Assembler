@@ -8,7 +8,7 @@ flags=-I/Users/zaharbessonov/Desktop/Учёба\ в\ институте\ /Ин
 
 CC=g++
 
-sources=main.cpp asm_general_funcs.cpp asm_help_funcs.cpp asm_listing_funcs.cpp
+sources=main.cpp asm_general_funcs.cpp asm_help_funcs.cpp asm_listing_funcs.cpp asm_hashes.cpp ../size_of_file.cpp
 
 all:
-	$(CC) $(sources) -o assembler $(flags)
+	$(CC) $(sources) -o assembler -DASM $(flags)

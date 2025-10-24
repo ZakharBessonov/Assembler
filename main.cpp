@@ -6,19 +6,22 @@
 #include "asm_help_funcs.h"
 #include "asm_listing_funcs.h"
 #include "asm_structs.h"
+#include "asm_hashes.h"
 
+extern CommandAndHash tableOfHashes[];
 FILE* logfileAsm = NULL;
 
 int main(int argc, const char *argv[])
 {
     atexit(AsmCloseLogFile);
 
+    AsmCountAndSortHashesDjb2();
+
     if (AsmOpenLogFile())
     {
         return 0;
     }
 
-    logfileAsm = fopen(LOG_FILE_NAME_ASM, "w");
     if (argc <= REQUIRED_NUMBER_OF_ARGUMENTS)
     {
         fprintf(logfileAsm, "ERROR: Too little arguments were passed. \n"
@@ -27,7 +30,6 @@ int main(int argc, const char *argv[])
     }
 
     DataForAssembly dataForAssembly = {};
-
     if (AsmOpenSourceFile(argv[1], &dataForAssembly))
     {
         return 0;
@@ -41,7 +43,6 @@ int main(int argc, const char *argv[])
     {
         return 0;
     }
-
     AsmCompileByteCode(&dataForAssembly);   // Second compilation to convert labels into addresses.
 
     AsmWriteInformationToListingFile(&dataForAssembly, argv[1]);

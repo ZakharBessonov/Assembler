@@ -8,46 +8,16 @@
 
 #include "asm_consts.h"
 #include "asm_help_funcs.h"
-#include "asm_commands.h"
+#include "codes_of_commands.h"
 #include "asm_structs.h"
+#include "asm_hashes.h"
+#include "../size_of_file.h"
+
 
 extern FILE* logfileAsm;
+extern CommandAndHash tableOfHashes[];
 
-size_t AsmSizeOfFile(FILE* fp)
-{
-    int descriptor = fileno(fp);
-    struct stat statistics = {};
-    fstat(descriptor, &statistics);
-    return (size_t)statistics.st_size;
-}
-
-int AsmOpenSourceFile(const char* sourceName, DataForAssembly* dataForAssembly)
-{
-    dataForAssembly->source = fopen(sourceName, "r");
-    if (dataForAssembly->source == NULL)
-    {
-        fprintf(logfileAsm, "ERROR: Failed to open file \"%s\".\n", sourceName);
-        return 1;
-    }
-
-    return 0;
-}
-
-size_t AsmReadFile(DataForAssembly* dataForAssembly)
-{
-    size_t sizeOfFile = AsmSizeOfFile(dataForAssembly->source);
-    dataForAssembly->buffer = (char*) calloc(sizeOfFile + 2, 1);
-
-    if (dataForAssembly->buffer == NULL)
-    {
-        fprintf(logfileAsm, "ERROR: Failed to allocate memory for dataForAssembly->buffer.\n");
-        return 1;
-    }
-
-    return (size_t)read(fileno(dataForAssembly->source), dataForAssembly->buffer, sizeOfFile);
-}
-
-size_t AsmCountNumLine(DataForAssembly* dataForAssembly, size_t lengthOfBuffer)
+static size_t AsmCountNumLine(DataForAssembly* dataForAssembly, size_t lengthOfBuffer)
 {
     size_t ans = 0;
 
@@ -63,14 +33,40 @@ size_t AsmCountNumLine(DataForAssembly* dataForAssembly, size_t lengthOfBuffer)
     return ans + 1;
 }
 
-size_t AsmFillArrayOfPointers(DataForAssembly* dataForAssembly, size_t lengthOfBuffer)
+int AsmOpenSourceFile(const char* sourceName, DataForAssembly* dataForAssembly)
+{
+    dataForAssembly->source = fopen(sourceName, "r");
+    if (dataForAssembly->source == NULL)
+    {
+        PRINT_LOG_FILE_ASM("ERROR: Failed to open file \"%s\".\n", sourceName);
+        return 1;
+    }
+
+    return 0;
+}
+
+size_t AsmReadFile(DataForAssembly* dataForAssembly)
+{
+    size_t sizeOfFile = SizeOfFile(dataForAssembly->source);
+    dataForAssembly->buffer = (char*) calloc(sizeOfFile + 2, 1);
+
+    if (dataForAssembly->buffer == NULL)
+    {
+        PRINT_LOG_FILE_ASM("ERROR: Failed to allocate memory for dataForAssembly->buffer.\n");
+        return 1;
+    }
+
+    return (size_t)read(fileno(dataForAssembly->source), dataForAssembly->buffer, sizeOfFile);
+}
+
+static size_t AsmFillArrayOfPointers(DataForAssembly* dataForAssembly, size_t lengthOfBuffer)
 {
     size_t numOfLine = AsmCountNumLine(dataForAssembly, lengthOfBuffer);
     dataForAssembly->arrayOfPointers = (char**) calloc(numOfLine + 1, sizeof(char*));
 
     if (dataForAssembly->arrayOfPointers == NULL)
     {
-        fprintf(logfileAsm, "ERROR: Failed to allocate memory for dataForAssembly->arrayOfPointers.\n");
+        PRINT_LOG_FILE_ASM("ERROR: Failed to allocate memory for dataForAssembly->arrayOfPointers.\n");
         return 1;
     }
 
@@ -155,6 +151,19 @@ void AsmByteCodeDtor(DataForAssembly* dataForAssembly)
     dataForAssembly->lengthOfByteCode = 0;
 }
 
+unsigned long AsmCountHashDjb2OfCommand(const char* command)
+{
+    unsigned long hash = 5381;
+
+    while (*command != '\0')
+    {
+        hash = ((hash << 5) + hash) + (unsigned long)(*command);
+        command++;
+    }
+
+    return hash;
+}
+
 int AsmOpenLogFile()
 {
     logfileAsm = fopen(LOG_FILE_NAME_ASM, "w");
@@ -172,4 +181,88 @@ void AsmCloseLogFile()
     fclose(logfileAsm);
 }
 
+int Signum(unsigned long number1, unsigned long number2)
+{
+    if (number1 < number2)
+    {
+        return -1;
+    }
+    else if (number1 > number2)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
+int AsmBinSearchCommandByHash(unsigned long hash)
+{
+    int leftBorder = 0;
+    int rightBorder = CNT_OF_COMMANDS;
+    int middle = 0;
+
+    for (int i = 0; i < 27; i++)
+    {
+        printf("%d \"%s\": %lu\n", i, cmds[tableOfHashes[i].code].name, tableOfHashes[i].hash);
+    }
+    printf("\n\n");
+
+    while (rightBorder - leftBorder > 1)
+    {
+        middle = (leftBorder + rightBorder) / 2;
+        //
+        printf("L: %-10d     R: %-10d\n", leftBorder, rightBorder);
+        //
+
+        if (tableOfHashes[middle].hash > hash)
+        {
+            rightBorder = middle;
+        }
+        else
+        {
+            leftBorder = middle;
+        }
+    }
+
+    //
+        printf("L: %-10d     R: %-10d\n", leftBorder, rightBorder);
+    //
+
+    if (tableOfHashes[leftBorder].hash == hash)
+    {
+        return leftBorder;
+    }
+
+    return -1;
+}
+
+int AsmScanfLine(DataForAssembly* dataForAssembly, size_t numOfLine, TypeOfReadArgument typeOfReadArgument, void* target)
+{
+    int cntOfReadChars = 0;
+    int result = 0;
+    int shift = dataForAssembly->lineShift;
+    char* strPt = NULL;
+    int* intPt = NULL;
+
+    switch(typeOfReadArgument)
+    {
+        case STRING:
+            strPt = (char*)target;
+            result = sscanf(dataForAssembly->arrayOfPointers[numOfLine] + shift, "%s%n", strPt, &cntOfReadChars);
+            break;
+        case NUMBER:
+            intPt = (int*)target;
+            result = sscanf(dataForAssembly->arrayOfPointers[numOfLine] + shift, "%d%n", intPt, &cntOfReadChars);
+            break;
+        case LABEL:
+            intPt = (int*)target;
+            result = sscanf(dataForAssembly->arrayOfPointers[numOfLine] + shift, " :%d%n", intPt, &cntOfReadChars);
+            break;
+        default:
+            break;
+    }
+
+    dataForAssembly->lineShift += cntOfReadChars;
+    return result;
+}
 

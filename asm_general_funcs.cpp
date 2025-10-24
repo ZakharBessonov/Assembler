@@ -5,10 +5,12 @@
 #include "asm_consts.h"
 #include "asm_general_funcs.h"
 #include "asm_help_funcs.h"
-#include "asm_commands.h"
+#include "codes_of_commands.h"
 #include "asm_structs.h"
+#include "asm_hashes.h"
 
 extern FILE* logfileAsm;
+extern CommandAndHash tableOfHashes[];
 
 int AsmCompileByteCode(DataForAssembly* dataForAssembly)
 {
@@ -16,6 +18,8 @@ int AsmCompileByteCode(DataForAssembly* dataForAssembly)
 
     for (size_t numOfLine = 0; numOfLine < dataForAssembly->cntOfLines; numOfLine++)
     {
+        dataForAssembly->lineShift = 0;
+
         if (AsmWriteLineToByteCode(numOfLine, dataForAssembly))
         {
             return 1;
@@ -29,7 +33,7 @@ int AsmWriteLineToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly)
 {
     if (AsmLineIsLabel(numOfLine, dataForAssembly))
     {
-        return 0;
+        return AsmProcessLabel(numOfLine, dataForAssembly);
     }
 
     TypeOfArg typeOfArg = PARAM_ZERO;
@@ -48,6 +52,8 @@ int AsmWriteLineToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly)
             return AsmWriteParamRegisterToByteCode(numOfLine, dataForAssembly);
         case PARAM_LABEL:
             return AsmWriteParamLabelToByteCode(numOfLine, dataForAssembly);
+        case PARAM_RAM_MEMORY:
+            return AsmWriteParamRamMemoryToByteCode(numOfLine, dataForAssembly);
         default:
             return 1;
     }
@@ -55,51 +61,52 @@ int AsmWriteLineToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly)
 
 int AsmLineIsLabel(size_t numOfLine, DataForAssembly* dataForAssembly)
 {
-    if (dataForAssembly->arrayOfPointers[numOfLine][0] != ':')
-    {
-        return 0;
-    }
+    return dataForAssembly->arrayOfPointers[numOfLine][0] == ':';
+}
 
+int AsmProcessLabel(size_t numOfLine, DataForAssembly* dataForAssembly)
+{
     int label = -1;
-    sscanf(dataForAssembly->arrayOfPointers[numOfLine], ":%d", &label);
+    AsmScanfLine(dataForAssembly, numOfLine, LABEL, &label);
 
-    if (label == -1 || label >= (int)MAX_CNT_OF_LABELS)
+    if (label <= -1 || label >= (int)MAX_CNT_OF_LABELS)
     {
-        fprintf(logfileAsm, "ERROR: Invalid label on line %zu.\n", numOfLine + 1);
-        return 0;
+        PRINT_LOG_FILE_ASM("ERROR: Invalid label on line %zu.\n", numOfLine + 1);
+        return 1;
     }
 
     dataForAssembly->arrayOfLabels[label] = (int)dataForAssembly->lengthOfByteCode - HEADER_OFFSET;
-    return 1;
+    return 0;
 }
 
 int AsmWriteCommandToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly, TypeOfArg* typeOfArg)
 {
     char command[MAX_SIZE_OF_COMMAND] = "";
 
-    sscanf(dataForAssembly->arrayOfPointers[numOfLine], "%s", command);
+    AsmScanfLine(dataForAssembly, numOfLine, STRING, command);
+    unsigned long tempHash = AsmCountHashDjb2OfCommand(command);
 
-    for (int i = 0; i < CNT_OF_COMMANDS; i++)
+    int indexInTableOfHashes = AsmBinSearchCommandByHash(tempHash);
+
+    if (indexInTableOfHashes == -1 || strcmp(command, cmds[tableOfHashes[indexInTableOfHashes].code].name) != 0)
     {
-        if (strcmp(command, cmds[i].name) == 0)
-        {
-            dataForAssembly->byteCode[dataForAssembly->lengthOfByteCode++] = cmds[i].code;
-            *typeOfArg = cmds[i].type;
-            return 0;
-        }
+        PRINT_LOG_FILE_ASM("ERROR: Invalid command on line %zu.\n", numOfLine + 1);
+        return 1;
     }
 
-    fprintf(logfileAsm, "ERROR: Invalid command on line %zu.\n", numOfLine + 1);
+    CodeOfCommand foundCode = tableOfHashes[indexInTableOfHashes].code;
+    dataForAssembly->byteCode[dataForAssembly->lengthOfByteCode++] = foundCode;
+    *typeOfArg = cmds[foundCode].type;
 
-    return 1;
+    return 0;
 }
 
 int AsmWriteParamNumberToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly)
 {
     int number = 0;
-    if (sscanf(dataForAssembly->arrayOfPointers[numOfLine], "%*s %d", &number) <= 0)
+    if (AsmScanfLine(dataForAssembly, numOfLine, NUMBER, &number) <= 0)
     {
-        fprintf(logfileAsm, "ERROR: Invalid number-argument on line %zu.\n", numOfLine + 1);
+        PRINT_LOG_FILE_ASM("ERROR: Invalid number-argument on line %zu.\n", numOfLine + 1);
         return 1;
     }
 
@@ -111,21 +118,35 @@ int AsmWriteParamNumberToByteCode(size_t numOfLine, DataForAssembly* dataForAsse
 int AsmWriteParamRegisterToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly)
 {
     char tempRegister[RESERVE_VOLUME_FOR_STRINGS] = "";
-    if (sscanf(dataForAssembly->arrayOfPointers[numOfLine], "%*s %s", tempRegister) <= 0 || AsmIsRegisterInvalid(tempRegister))
+
+    if (AsmScanfLine(dataForAssembly, numOfLine, STRING, tempRegister) <= 0 ||
+        AsmIsRegisterInvalid(tempRegister))
     {
-        fprintf(logfileAsm, "ERROR: Invalid register-argument on line %zu.\n", numOfLine + 1);
+        PRINT_LOG_FILE_ASM("ERROR: Invalid register-argument on line %zu.\n", numOfLine + 1);
         return 1;
     }
 
     int numberOfRegister = 0;
-    if (tempRegister[0] == '[')
+    numberOfRegister = tempRegister[0] - 'A';
+
+    dataForAssembly->byteCode[dataForAssembly->lengthOfByteCode++] = numberOfRegister;
+
+    return 0;
+}
+
+int AsmWriteParamRamMemoryToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly)
+{
+    char tempRamRegister[RESERVE_VOLUME_FOR_STRINGS] = "";
+
+    if (AsmScanfLine(dataForAssembly, numOfLine, STRING, tempRamRegister) <= 0 ||
+        AsmIsRamRegisterInvalid(tempRamRegister))
     {
-        numberOfRegister = tempRegister[1] - 'A';
+        PRINT_LOG_FILE_ASM("ERROR: Invalid ram-memory-argument on line %zu.\n", numOfLine + 1);
+        return 1;
     }
-    else
-    {
-        numberOfRegister = tempRegister[0] - 'A';
-    }
+
+    int numberOfRegister = 0;
+    numberOfRegister = tempRamRegister[1] - 'A';
 
     dataForAssembly->byteCode[dataForAssembly->lengthOfByteCode++] = numberOfRegister;
 
@@ -135,9 +156,10 @@ int AsmWriteParamRegisterToByteCode(size_t numOfLine, DataForAssembly* dataForAs
 int AsmWriteParamLabelToByteCode(size_t numOfLine, DataForAssembly* dataForAssembly)
 {
     int label = -1;
-    if (sscanf(dataForAssembly->arrayOfPointers[numOfLine], "%*s :%d", &label) <= 0 || label < 0 || label >= (int)MAX_CNT_OF_LABELS)
+
+    if (AsmScanfLine(dataForAssembly, numOfLine, LABEL, &label) <= 0 || label < 0 || label >= (int)MAX_CNT_OF_LABELS)
     {
-        fprintf(logfileAsm, "ERROR: Invalid label-argument on line %zu.\n", numOfLine + 1);
+        PRINT_LOG_FILE_ASM("ERROR: Invalid label-argument on line %zu.\n", numOfLine + 1);
         return 1;
     }
 
@@ -148,14 +170,15 @@ int AsmWriteParamLabelToByteCode(size_t numOfLine, DataForAssembly* dataForAssem
 
 int AsmIsRegisterInvalid(const char* tempRegister)
 {
-    if (tempRegister[0] == '[')
-    {
-        return (strlen(tempRegister) != MAX_LENGTH_OF_REGISTER_NAME + 2) || (tempRegister[1] < 'A')
-            || (tempRegister[1] >= 'A' + CNT_OF_REGISTERS);
-    }
+    return (strlen(tempRegister) != MAX_LENGTH_OF_REGISTER_NAME) || (tempRegister[0] < 'A') ||
+           (tempRegister[0] >= 'A' + CNT_OF_REGISTERS) || tempRegister[1] != 'X';
+}
 
-    return (strlen(tempRegister) != MAX_LENGTH_OF_REGISTER_NAME) || (tempRegister[0] < 'A')
-            || (tempRegister[0] >= 'A' + CNT_OF_REGISTERS);
+int AsmIsRamRegisterInvalid(const char* tempRamRegister)
+{
+    return (strlen(tempRamRegister) != MAX_LENGTH_OF_REGISTER_NAME + 2) || (tempRamRegister[1] < 'A') ||
+           (tempRamRegister[1] >= 'A' + CNT_OF_REGISTERS) || tempRamRegister[2] != 'X' || tempRamRegister[0] != '[' ||
+           tempRamRegister[3] != ']';
 }
 
 int AsmWriteByteCodeToBinFile(DataForAssembly* dataForAssembly, const char* outputFileName)
@@ -163,7 +186,7 @@ int AsmWriteByteCodeToBinFile(DataForAssembly* dataForAssembly, const char* outp
     FILE* outputFile = fopen(outputFileName, "wb");
     if (outputFile == NULL)
     {
-        fprintf(logfileAsm, "ERROR: An error occurred while opening outputFile.bin.\n");
+        PRINT_LOG_FILE_ASM("ERROR: An error occurred while opening outputFile.bin.\n");
         return 1;
     }
 

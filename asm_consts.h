@@ -4,8 +4,8 @@
 const size_t MAX_CNT_OF_LABELS = 20;
 const size_t RESERVE_VOLUME_FOR_STRINGS = 30;
 const int    HEADER_OFFSET = 4;
-const int    MAX_LENGTH_OF_REGISTER_NAME = 2;
 const int    CNT_OF_REGISTERS = 8;
+const int    MAX_LENGTH_OF_REGISTER_NAME = 2;
 const int    REQUIRED_NUMBER_OF_ARGUMENTS = 2;
 
 const int    SIGNATURE_1 = 20;
